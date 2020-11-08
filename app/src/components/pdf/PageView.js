@@ -1,3 +1,5 @@
+import { getOutputScale, approximateFraction, roundToDivide } from './util';
+
 class PageViewer {
   constructor(pageNumber, pdfProxy, firstPageProxy) {
     this.page = pageNumber;
@@ -7,7 +9,7 @@ class PageViewer {
     this.canvas = document.createElement('canvas');
   }
 
-  getPageSize(scale = 1) {
+  getPageSize(scale) {
     const size = (this.pageProxy || this.firstPageProxy).getViewport(scale);
     return {
       width: size.width,
@@ -24,25 +26,32 @@ class PageViewer {
   }
 
   // 绘制页面
-  drawPage(scale = 1) {
+  drawPage(scale = 96.0 / 72.0) {
     // 构建 canvas 模块
     let viewport = this.pageProxy.getViewport(scale);
     const context = this.canvas.getContext('2d');
 
     // TODO: 根据 scale，适配转换 canvas
-    const { width, height } = this.getPageSize(scale);
-    this.canvas.width = width;
-    this.canvas.height = height;
 
-    this.canvas.style.width = width + 'px';
-    this.canvas.style.height = height + 'px';
+    const outputScale = getOutputScale();
+    const sfx = approximateFraction(outputScale.sx);
+    const sfy = approximateFraction(outputScale.sy);
+    console.log(outputScale);
+    console.log(sfx, sfy);
+
+    console.log('pdf size', viewport.width, viewport.height);
+    this.canvas.width = roundToDivide(viewport.width * outputScale.sx, sfx[0]);
+    this.canvas.height = roundToDivide(viewport.height * outputScale.sy, sfy[0]);
+
+    this.canvas.style.width = roundToDivide(viewport.width, sfx[1]) + 'px';
+    this.canvas.style.height = roundToDivide(viewport.height, sfy[1]) + 'px';
 
     // 准备渲染参数，渲染页面
     const renderContext = {
       canvasContext: context,
       viewport,
       enableWebGL: true,
-      transform: null,
+      transform: !outputScale.scaled ? null : [outputScale.sx, 0, 0, outputScale.sy, 0, 0],
       renderInteractiveForms: false,
     };
 
