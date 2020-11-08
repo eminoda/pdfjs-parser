@@ -1,7 +1,9 @@
 <template>
-  <div ref="printContainer">
-    <div v-for="(item, index) in this.pages" :key="index">
-      <page-viewer :renderPage="item" />
+  <div>
+    <div ref="printContainer">
+      <div v-for="(item, index) in this.pages" :key="index">
+        <page-viewer ref="pageViewer" :renderPage="item" />
+      </div>
     </div>
   </div>
 </template>
@@ -10,20 +12,20 @@
 
 import PageViewer from './PageViewer'
 import PDFDocument from './Document'
-
+import { debounce } from './util'
 export default {
   components: { PageViewer },
   data() {
     return {
       pdfDocument: null,
       pageCount: 0,
-      pages: []
+      pages: [],
     }
   },
   methods: {
-    async renderPage() {
-      for (let page of this.pages) {
-        page.render()
+    handleScroll() {
+      for (let i = 0; i < this.pages.length; i++) {
+        this.$refs.pageViewer[i].render()
       }
     },
     async init() {
@@ -32,11 +34,15 @@ export default {
       // 每页展示队列
       this.pages = this.pdfDocument.pages
       // 下轮循环，直接渲染到页面
-      this.$nextTick(this.renderPage)
+      // this.$nextTick(this.renderPage)
     }
   },
   mounted() {
     this.init()
+    const debounceFn = debounce(this.handleScroll)
+    window.addEventListener('scroll', () => {
+      debounceFn()
+    })
   }
 }
 </script>

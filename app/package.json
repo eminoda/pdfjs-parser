@@ -9,6 +9,8 @@
   },
   "dependencies": {
     "core-js": "^3.6.5",
+    "less": "^3.12.2",
+    "less-loader": "^7.0.2",
     "pdfjs-dist": "^2.2.228",
     "script-loader": "^0.7.2",
     "vue": "^2.6.11"
