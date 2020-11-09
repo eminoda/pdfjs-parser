@@ -1,7 +1,7 @@
 <template>
-  <div class="page-viewer">
+  <div class="page-viewer" :style="pageSizeStyle">
     <div class="loadingIcon" v-if="status == 'loading'"></div>
-    <div class="page-canvas" ref="canvasRef" :style="pageSizeStyle"></div>
+    <div class="page-canvas" ref="canvasRef"></div>
   </div>
 </template>
 
@@ -10,7 +10,8 @@ import PageViewer from './PageViewer'
 export default {
   props: {
     page: Number,
-    renderPage: PageViewer
+    renderPage: PageViewer,
+    scale: Number
   },
   data() {
     return {
@@ -25,10 +26,10 @@ export default {
   },
   computed: {
     pageSizeStyle() {
-      const { width, height } = this.renderPage.getPageSize();
+      const { width, height } = this.renderPage.getPageSize()
       return {
         width: width + 'px',
-        height: height + 'px',
+        height: height + 'px'
       }
     }
   },
@@ -41,16 +42,18 @@ export default {
           this.status = 'loading'
           this.renderingView()
         }
-
       }
     },
     renderingView() {
-      this.renderPage.render().then(() => {
-        this.status = 'rendered'
-        this.$refs.canvasRef.appendChild(this.renderPage.canvas)
-      }).catch(err => {
-        console.log(err)
-      })
+      this.renderPage
+        .render()
+        .then(() => {
+          this.status = 'rendered'
+          this.$refs.canvasRef.appendChild(this.renderPage.canvas)
+        })
+        .catch(err => {
+          console.log(err)
+        })
     }
   },
   mounted() {
