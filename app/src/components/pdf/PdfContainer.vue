@@ -1,71 +1,111 @@
 <template>
-  <div>
-    <button @click="handlePage()">下一页</button>
-    <div ref="printContainer">
-      <div v-for="(item, index) in this.pages" :key="index">
-        <page-viewer ref="pageViewer" :renderPage="item" />
-      </div>
-    </div>
+  <!-- 主容器 -->
+  <div id="viewerContainer">
+    <pdf-viewer ref="pdfViewerRef" @pdfviewer-loaded="handlePdfViewerLoaded" :pdfDocument="pdfDocument" :scale="scale" />
   </div>
 </template>
 
 <script>
-import PageViewer from './PageViewer'
-import PDFDocument from './Document'
-import { debounce } from './util'
+import PdfViewer from "./pdfViewer";
+import { MAX_SCALE, MIN_SCALE, debounce } from "./utils";
 export default {
-  components: { PageViewer },
+  components: { PdfViewer },
+  props: {
+    pdfUrl: {
+      type: String,
+      default: "",
+    },
+    scale: {
+      type: Number,
+      default: 1,
+    },
+    page: {
+      type: Number,
+      default: 1,
+    },
+    options: {
+      type: Object,
+      default() {
+        return {};
+      },
+    },
+  },
   data() {
     return {
       pdfDocument: null,
-      pageCount: 0,
       pages: [],
-    }
+      container: null,
+      timer: null,
+      debounceScroll: debounce(() => {
+        this.$refs.pdfViewerRef.renderHighestPriority();
+      }),
+    };
   },
-  methods: {
-    handlePage() {
-      const y = this.$refs.pageViewer[10].$el.getBoundingClientRect().top
-      window.scrollTo(0, y)
-      this.$refs.pageViewer[10].render()
+  watch: {
+    pdfUrl() {
+      this.loadPdfDocument();
     },
-    handleScroll() {
-      for (let i = 0; i < this.pages.length; i++) {
-        this.$refs.pageViewer[i].render()
+    scale(newVal) {
+      this.setScale(newVal);
+    },
+    page(newVal) {
+      const page = Number(newVal);
+      if (!this.pages || this.pages.length == 0) {
+        console.log("文档未加载完毕");
+      } else if (isNaN(page) || page > this.pages.length) {
+        console.log("页码错误");
+      } else {
+        this.scrollIntoView();
       }
     },
-    async init() {
-      // 解析 pdf 文件，获取 pdf 文档对象（自定义）
-      this.pdfDocument = await new PDFDocument().init('/demo.pdf')
-      // 每页展示队列
-      this.pages = this.pdfDocument.pages
-      // 下轮循环，直接渲染到页面
-      // this.$nextTick(this.renderPage)
+  },
+  methods: {
+    async loadPdfDocument() {
+      this.pdfDocument = await window.pdfjsLib.getDocument({ ...this.options, url: this.pdfUrl }).promise;
+      this.$emit("pdf-document", this.pdfDocument);
+    },
+    scrollIntoView() {
+      const element = this.pages[this.page - 1].div;
+      if (element) {
+        let offsetY = element.offsetTop + element.clientTop;
+        this.container.scrollTop = offsetY;
+      }
+    },
+    setScale(scale) {
+      // 最值范围
+      if (scale > MAX_SCALE) {
+        scale = MAX_SCALE;
+      }
+      if (scale < MIN_SCALE) {
+        scale = MIN_SCALE;
+      }
+      // 更新尺寸
+      this.pages.forEach((item) => {
+        item.update(scale);
+      });
+      // 滚动到位
+    },
+    handlePdfViewerLoaded(pages) {
+      this.pages = pages;
+      this.$emit("pdf-pages", this.pages);
     },
   },
   mounted() {
-    this.init()
-    const debounceFn = debounce(this.handleScroll)
-    window.addEventListener('scroll', () => {
-      debounceFn()
-    })
+    this.container = document.getElementById("viewerContainer");
+    this.container.addEventListener("scroll", this.debounceScroll, true);
   },
-}
+};
 </script>
 
-<!-- Add "scoped" attribute to limit CSS to this component only -->
-<style scoped>
-h3 {
-  margin: 40px 0 0;
-}
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-li {
-  display: inline-block;
-  margin: 0 10px;
-}
-a {
-  color: #42b983;
+<style lang="less" scoped>
+#viewerContainer {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  position: absolute;
+  top: 32px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  outline: none;
 }
 </style>
