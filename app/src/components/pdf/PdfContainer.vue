@@ -1,5 +1,6 @@
 <template>
   <div>
+    <button @click="handlePage()">下一页</button>
     <div ref="printContainer">
       <div v-for="(item, index) in this.pages" :key="index">
         <page-viewer ref="pageViewer" :renderPage="item" />
@@ -9,7 +10,6 @@
 </template>
 
 <script>
-
 import PageViewer from './PageViewer'
 import PDFDocument from './Document'
 import { debounce } from './util'
@@ -23,6 +23,11 @@ export default {
     }
   },
   methods: {
+    handlePage() {
+      const y = this.$refs.pageViewer[10].$el.getBoundingClientRect().top
+      window.scrollTo(0, y)
+      this.$refs.pageViewer[10].render()
+    },
     handleScroll() {
       for (let i = 0; i < this.pages.length; i++) {
         this.$refs.pageViewer[i].render()
@@ -35,7 +40,7 @@ export default {
       this.pages = this.pdfDocument.pages
       // 下轮循环，直接渲染到页面
       // this.$nextTick(this.renderPage)
-    }
+    },
   },
   mounted() {
     this.init()
@@ -43,7 +48,7 @@ export default {
     window.addEventListener('scroll', () => {
       debounceFn()
     })
-  }
+  },
 }
 </script>
 
